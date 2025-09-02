@@ -11,12 +11,10 @@
 #define LED1 PORTB,3
 
 ; Variables en RAM
-    CBLOCK 0x20
-        COUNT1
-        COUNT2
-        COUNT3
-    ENDC
-
+    COUNT1 EQU 0x20
+    COUNT2 EQU 0x20
+    COUNT3 EQU 0x20 
+    
 ; Point d'entrée
     ORG 0x000
     GOTO main
@@ -26,14 +24,14 @@ InitPic:
     ; Bank 1
     BSF STATUS, RP0
     CLRF ANSEL             ; Désactive les entrées analogiques
-    MOVLW b'10000000'      ; RA7 en entrée (SW3), les autres RA en entrée
+    MOVLW 10000000B      ; RA7 en entrée (SW3), les autres RA en entrée
     MOVWF TRISA
-    MOVLW b'11000111'      ; RB7, RB6, RB2, RB1, RB0 en entrée, RB3 (LED) en sortie
+    MOVLW 11000111B      ; RB7, RB6, RB2, RB1, RB0 en entrée, RB3 (LED) en sortie
     MOVWF TRISB
     BCF STATUS, RP0        ; Bank 0
 
     ; Activer résistances pull-up internes sur PORTB (option_reg bit 7 = 0 pour activer)
-    MOVLW b'00000111'      ; Pull-ups activés sur RB0, RB1, RB2 (optionnel)
+    MOVLW 00000111B      ; Pull-ups activés sur RB0, RB1, RB2 (optionnel)
     MOVWF OPTION_REG
 
     CLRF PORTA             ; Nettoyer port A
@@ -48,7 +46,7 @@ main:
 MainLoop:
     ; Lire boutons
     MOVF PORTB, W
-    ANDLW b11000000       ; Masquer RB7 et RB6
+    ANDLW 11000000B       ; Masquer RB7 et RB6
     IORWF PORTA, W        ; OR avec RA (pour RA7)
     BTFSS STATUS,Z        ; Si au moins un bit à 0 (bouton appuyé), on saute
     GOTO FastBlink
