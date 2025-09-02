@@ -1,85 +1,112 @@
 #include <xc.inc>
  
-        __CONFIG _INTRC_OSC_NOCLKOUT & _WDT_OFF & _PWRTE_ON & _MCLR_OFF
+    LIST P=16F88
 
-; Définition des constantes de délai
-DELAY_SLOW EQU 0xFF
-DELAY_FAST EQU 0x30
+    __CONFIG _INTRC_OSC_NOCLKOUT & _WDT_OFF & _PWRTE_ON & _MCLR_ON & _BODEN_ON & _LVP_OFF
+
+; Définition des alias pour ports
+#define SW1 PORTB,6
+#define SW2 PORTB,7
+#define SW3 PORTA,7
+#define LED1 PORTB,3
 
 ; Variables en RAM
-CBLOCK 0x20
-    delay_count
-ENDC
+    CBLOCK 0x20
+        COUNT1
+        COUNT2
+        COUNT3
+    ENDC
 
 ; Point d'entrée
-    ORG 0x00
-    GOTO START
+    ORG 0x000
+    GOTO main
 
-START:
-    ; Initialisation ports et registres
-
-    ; Configurer PORTB bits 0 et 1 en entrée, bit 7 en sortie
-    BSF STATUS, RP0      ; Bank 1
-    MOVLW b'10000011'    ; RB7=0 (sortie), RB0 et RB1=1 (entrée), autres bits peuvent être entrée aussi
+; Routine d'initialisation du PIC
+InitPic:
+    ; Bank 1
+    BSF STATUS, RP0
+    CLRF ANSEL             ; Désactive les entrées analogiques
+    MOVLW b'10000000'      ; RA7 en entrée (SW3), les autres RA en entrée
+    MOVWF TRISA
+    MOVLW b'11000111'      ; RB7, RB6, RB2, RB1, RB0 en entrée, RB3 (LED) en sortie
     MOVWF TRISB
-    ; Activer résistances pull-up internes sur PORTB
-    MOVLW b'00000111'    ; RBPU=0 (activé), RB0,1,2 pull-ups activés
+    BCF STATUS, RP0        ; Bank 0
+
+    ; Activer résistances pull-up internes sur PORTB (option_reg bit 7 = 0 pour activer)
+    MOVLW b'00000111'      ; Pull-ups activés sur RB0, RB1, RB2 (optionnel)
     MOVWF OPTION_REG
 
-    BCF STATUS, RP0      ; Bank 0
+    CLRF PORTA             ; Nettoyer port A
+    CLRF PORTB             ; Nettoyer port B
 
-    ; Initialiser PORTB
-    CLRF PORTB
-
-MAIN_LOOP:
-    ; Lire boutons (bits 0 et 1)
-    MOVF PORTB, W
-    ANDLW b'00000011'      ; Masque bits 0 et 1
-
-    ; Si au moins un bouton appuyé (logique 0)
-    BTFSS STATUS, Z        ; Test si W != 0, si aucun bouton pressé W=3 donc Z=0
-    GOTO FAST_BLINK        ; Au moins un bouton appuyé
-
-    GOTO SLOW_BLINK        ; Aucun bouton appuyé
-
-; Blink rapide
-FAST_BLINK:
-    BSF PORTB, 7
-    CALL DELAY_FAST_ROUTINE
-    BCF PORTB, 7
-    CALL DELAY_FAST_ROUTINE
-    GOTO MAIN_LOOP
-
-; Blink lent
-SLOW_BLINK:
-    BSF PORTB, 7
-    CALL DELAY_SLOW_ROUTINE
-    BCF PORTB, 7
-    CALL DELAY_SLOW_ROUTINE
-    GOTO MAIN_LOOP
-
-; Sous-routine délai rapide
-DELAY_FAST_ROUTINE:
-    MOVLW DELAY_FAST
-    MOVWF delay_count
-DFR_FAST:
-    NOP
-    NOP
-    NOP
-    DECFSZ delay_count, F
-    GOTO DFR_FAST
     RETURN
 
-; Sous-routine délai lent
-DELAY_SLOW_ROUTINE:
-    MOVLW DELAY_SLOW
-    MOVWF delay_count
-DFR_SLOW:
+; Main program
+main:
+    CALL InitPic
+
+MainLoop:
+    ; Lire boutons
+    MOVF PORTB, W
+    ANDLW b11000000       ; Masquer RB7 et RB6
+    IORWF PORTA, W        ; OR avec RA (pour RA7)
+    BTFSS STATUS,Z        ; Si au moins un bit à 0 (bouton appuyé), on saute
+    GOTO FastBlink
+
+    ; Aucun bouton appuyé
+SlowBlink:
+    BSF LED1
+    CALL Delay_1s
+    BCF LED1
+    CALL Delay_1s
+    GOTO MainLoop
+
+; Bouton appuyé
+FastBlink:
+    BSF LED1
+    CALL Delay_100ms
+    BCF LED1
+    CALL Delay_100ms
+    GOTO MainLoop
+
+; Routine délai 1s (approximatif, à ajuster selon oscillateur)
+Delay_1s:
+    MOVLW 8
+    MOVWF COUNT1
+D1_LOOP1:
+    MOVLW 249
+    MOVWF COUNT2
+D1_LOOP2:
+    MOVLW 250
+    MOVWF COUNT3
+D1_LOOP3:
     NOP
+    DECFSZ COUNT3, F
+    GOTO D1_LOOP3
+    DECFSZ COUNT2, F
+    GOTO D1_LOOP2
+    DECFSZ COUNT1, F
+    GOTO D1_LOOP1
+    RETURN
+
+; Routine délai 100ms (approximatif)
+Delay_100ms:
+    MOVLW 1
+    MOVWF COUNT1
+D100_LOOP1:
+    MOVLW 249
+    MOVWF COUNT2
+D100_LOOP2:
+    MOVLW 250
+    MOVWF COUNT3
+D100_LOOP3:
     NOP
-    NOP
-    DECFSZ delay_count, F
-    GOTO DFR_SLOW
+    DECFSZ COUNT3, F
+    GOTO D100_LOOP3
+    DECFSZ COUNT2, F
+    GOTO D100_LOOP2
+    DECFSZ COUNT1, F
+    GOTO D100_LOOP1
     RETURN
 
     END
