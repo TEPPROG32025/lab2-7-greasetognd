@@ -2,7 +2,12 @@
  
     LIST P=16F88
 
-    __CONFIG _INTRC_OSC_NOCLKOUT & _WDT_OFF & _PWRTE_ON & _MCLR_ON & _BODEN_ON & _LVP_OFF
+    CONFIG WDTE = OFF
+    CONFIG PWRTE = ON
+    CONFIG MCLRE = ON
+    CONFIG BOREN = ON
+    CONFIG LVP = OFF
+
 
 ; Définition des alias pour ports
 #define SW1 PORTB,6
@@ -22,13 +27,13 @@
 ; Routine d'initialisation du PIC
 InitPic:
     ; Bank 1
-    BSF STATUS, RP0
+    BANKSEL(ANSEL)
     CLRF ANSEL             ; Désactive les entrées analogiques
     MOVLW 10000000B      ; RA7 en entrée (SW3), les autres RA en entrée
     MOVWF TRISA
     MOVLW 11000111B      ; RB7, RB6, RB2, RB1, RB0 en entrée, RB3 (LED) en sortie
     MOVWF TRISB
-    BCF STATUS, RP0        ; Bank 0
+    
 
     ; Activer résistances pull-up internes sur PORTB (option_reg bit 7 = 0 pour activer)
     MOVLW 00000111B      ; Pull-ups activés sur RB0, RB1, RB2 (optionnel)
@@ -48,7 +53,7 @@ MainLoop:
     MOVF PORTB, W
     ANDLW 11000000B       ; Masquer RB7 et RB6
     IORWF PORTA, W        ; OR avec RA (pour RA7)
-    BTFSS STATUS,Z        ; Si au moins un bit à 0 (bouton appuyé), on saute
+    BTFSS STATUS,2   ; Si au moins un bit à 0 (bouton appuyé), on saute
     GOTO FastBlink
 
     ; Aucun bouton appuyé

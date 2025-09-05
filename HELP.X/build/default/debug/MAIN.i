@@ -1480,7 +1480,12 @@ ENDM
 
     LIST P=16F88
 
-    __CONFIG _INTRC_OSC_NOCLKOUT & _WDT_OFF & _PWRTE_ON & _MCLR_ON & _BODEN_ON & _LVP_OFF
+    CONFIG WDTE = OFF
+    CONFIG PWRTE = ON
+    CONFIG MCLRE = ON
+    CONFIG BOREN = ON
+    CONFIG LVP = OFF
+
 
 ; Définition des alias pour ports
 
@@ -1500,13 +1505,13 @@ ENDM
 ; Routine d'initialisation du PIC
 InitPic:
     ; Bank 1
-    BSF STATUS, ((STATUS) and 07Fh), 5
+    BANKSEL(ANSEL)
     CLRF ANSEL ; Désactive les entrées analogiques
     MOVLW 10000000B ; ((PORTA) and 07Fh), 7 en entrée (PORTA,7), les autres RA en entrée
     MOVWF TRISA
     MOVLW 11000111B ; ((PORTB) and 07Fh), 7, ((PORTB) and 07Fh), 6, ((PORTB) and 07Fh), 2, ((PORTB) and 07Fh), 1, ((PORTB) and 07Fh), 0 en entrée, ((PORTB) and 07Fh), 3 (LED) en sortie
     MOVWF TRISB
-    BCF STATUS, ((STATUS) and 07Fh), 5 ; Bank 0
+
 
     ; Activer résistances pull-up internes sur PORTB (option_reg bit 7 = 0 pour activer)
     MOVLW 00000111B ; Pull-ups activés sur ((PORTB) and 07Fh), 0, ((PORTB) and 07Fh), 1, ((PORTB) and 07Fh), 2 (optionnel)
@@ -1526,7 +1531,7 @@ MainLoop:
     MOVF PORTB, W
     ANDLW 11000000B ; Masquer ((PORTB) and 07Fh), 7 et ((PORTB) and 07Fh), 6
     IORWF PORTA, W ; OR avec RA (pour ((PORTA) and 07Fh), 7)
-    BTFSS STATUS,Z ; Si au moins un bit à 0 (bouton appuyé), on saute
+    BTFSS STATUS,2 ; Si au moins un bit à 0 (bouton appuyé), on saute
     GOTO FastBlink
 
     ; Aucun bouton appuyé
